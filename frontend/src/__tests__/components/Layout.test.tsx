@@ -30,7 +30,22 @@ describe('Layout', () => {
         });
       }),
       http.get('/api/v1/version', () => {
-        return HttpResponse.json({ version: '0.1.6', build: 'test' });
+        return HttpResponse.json({
+          version: '0.1.6',
+          build: 'test',
+          image_tag: 'tshirt-pip-amd64',
+          tag: 'pip-dock-checkpoint-20260526',
+          commit: '1234567890abcdef',
+        });
+      }),
+      http.get('/api/v1/updates/version', () => {
+        return HttpResponse.json({
+          version: '0.1.6',
+          repo: 'maziggy/bambuddy',
+          image_tag: 'tshirt-pip-amd64',
+          tag: 'pip-dock-checkpoint-20260526',
+          commit: '1234567890abcdef',
+        });
       }),
       http.get('/api/v1/settings/', () => {
         return HttpResponse.json({
@@ -164,8 +179,10 @@ describe('Layout', () => {
       render(<Layout />);
 
       await waitFor(() => {
-        // Version info is displayed in sidebar
-        expect(document.body).toBeInTheDocument();
+        expect(document.body).toHaveTextContent('v0.1.6');
+        expect(document.body).toHaveTextContent('tshirt-pip-amd64');
+        expect(document.body).toHaveTextContent('pip-dock-checkpoint-20260526');
+        expect(document.body).toHaveTextContent('1234567890ab');
       });
     });
   });

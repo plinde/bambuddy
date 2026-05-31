@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.auth import RequirePermissionIfAuthEnabled
-from backend.app.core.config import APP_VERSION, GITHUB_REPO, settings
+from backend.app.core.config import APP_VERSION, BUILD_COMMIT, BUILD_IMAGE_TAG, BUILD_TAG, GITHUB_REPO, settings
 from backend.app.core.database import get_db
 from backend.app.core.permissions import Permission
 from backend.app.models.settings import Settings
@@ -364,6 +364,9 @@ async def get_version():
     return {
         "version": APP_VERSION,
         "repo": GITHUB_REPO,
+        "commit": BUILD_COMMIT,
+        "tag": BUILD_TAG,
+        "image_tag": BUILD_IMAGE_TAG,
     }
 
 

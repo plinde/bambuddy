@@ -18,6 +18,10 @@ FROM python:3.13-slim-trixie
 
 WORKDIR /app
 
+ARG BAMBUDDY_BUILD_COMMIT=
+ARG BAMBUDDY_BUILD_TAG=
+ARG BAMBUDDY_IMAGE_TAG=
+
 # Install system dependencies
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -110,6 +114,9 @@ ENV PYTHONUNBUFFERED=1
 ENV DATA_DIR=/app/data
 ENV LOG_DIR=/app/logs
 ENV PORT=8000
+ENV BAMBUDDY_BUILD_COMMIT=${BAMBUDDY_BUILD_COMMIT}
+ENV BAMBUDDY_BUILD_TAG=${BAMBUDDY_BUILD_TAG}
+ENV BAMBUDDY_IMAGE_TAG=${BAMBUDDY_IMAGE_TAG}
 # Provide a local username + home for tools that call getpass.getuser() /
 # os.path.expanduser() under arbitrary PUIDs. With `user: "1001:1001"` the
 # stock python:3.13-slim image has no /etc/passwd entry for that UID, so

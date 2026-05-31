@@ -113,6 +113,15 @@ export function Layout() {
     queryFn: api.getVersion,
     staleTime: Infinity,
   });
+  const buildIdentity = (() => {
+    if (!versionInfo) return null;
+    const parts = [
+      versionInfo.image_tag,
+      versionInfo.tag,
+      versionInfo.commit ? versionInfo.commit.slice(0, 12) : null,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join('\n') : null;
+  })();
 
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -729,17 +738,44 @@ export function Layout() {
                 )}
               </div>
               {/* Bottom row: version */}
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-sm text-bambu-gray">v{versionInfo?.version || '...'}</span>
-                {updateCheck?.update_available && (
-                  <button
-                    onClick={() => navigate('/settings')}
-                    className="flex items-center gap-1 text-xs text-bambu-green hover:text-bambu-green/80 transition-colors"
-                    title={t('nav.updateAvailable', { version: updateCheck.latest_version })}
+              <div className="flex flex-col items-center gap-1 min-w-0 px-2">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm font-medium text-white">v{versionInfo?.version || '...'}</span>
+                  {updateCheck?.update_available && (
+                    <button
+                      onClick={() => navigate('/settings')}
+                      className="flex items-center gap-1 text-xs text-bambu-green hover:text-bambu-green/80 transition-colors"
+                      title={t('nav.updateAvailable', { version: updateCheck.latest_version })}
+                    >
+                      <ArrowUpCircle className="w-4 h-4" />
+                      <span>{t('nav.update')}</span>
+                    </button>
+                  )}
+                </div>
+                {buildIdentity && (
+                  <div
+                    className="grid w-full max-w-[13rem] gap-1.5 rounded-md border border-bambu-dark-tertiary bg-bambu-dark/80 px-2 py-1.5 text-[10px] leading-tight text-bambu-gray-light shadow-sm"
+                    title={buildIdentity}
                   >
-                    <ArrowUpCircle className="w-4 h-4" />
-                    <span>{t('nav.update')}</span>
-                  </button>
+                    <div className="min-w-0">
+                      <div className="uppercase tracking-wide text-bambu-gray">img</div>
+                      <div className="mt-0.5 break-all font-medium text-white">
+                        {versionInfo?.image_tag || 'unknown'}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="uppercase tracking-wide text-bambu-gray">tag</div>
+                      <div className="mt-0.5 break-all font-mono text-bambu-gray-light">
+                        {versionInfo?.tag || 'unknown'}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="uppercase tracking-wide text-bambu-gray">sha</div>
+                      <div className="mt-0.5 break-all font-mono text-bambu-gray-light">
+                        {versionInfo?.commit?.slice(0, 12) || 'unknown'}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

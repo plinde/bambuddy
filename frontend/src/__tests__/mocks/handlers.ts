@@ -569,7 +569,12 @@ export const handlers = [
     HttpResponse.json({ update_available: false, latest_version: null })
   ),
   http.get('/api/v1/updates/version', () =>
-    HttpResponse.json({ version: '0.1.5', commit: 'test' })
+    HttpResponse.json({
+      version: '0.1.5',
+      commit: 'test',
+      tag: '',
+      image_tag: '',
+    })
   ),
   http.get('/openapi.json', () =>
     HttpResponse.json({ openapi: '3.0.0', info: { title: 'Bambuddy', version: '0.1.5' }, paths: {} })

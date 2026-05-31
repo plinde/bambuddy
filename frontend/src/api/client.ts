@@ -3001,6 +3001,9 @@ export interface ShoppingListItemCreate {
 export interface VersionInfo {
   version: string;
   repo: string;
+  commit?: string;
+  tag?: string;
+  image_tag?: string;
 }
 
 export interface UpdateCheckResult {

@@ -30,6 +30,12 @@ class TestUpdatesAPI:
     async def test_get_version(self, async_client: AsyncClient):
         response = await async_client.get("/api/v1/updates/version")
         assert response.status_code == 200
+        result = response.json()
+        assert result["version"]
+        assert result["repo"] == "maziggy/bambuddy"
+        assert "commit" in result
+        assert "tag" in result
+        assert "image_tag" in result
 
     @pytest.mark.asyncio
     async def test_apply_update_docker_rejection(self, async_client: AsyncClient):

@@ -8,6 +8,9 @@ from pydantic_settings import BaseSettings
 # Application version - single source of truth
 APP_VERSION = "0.2.4.9"
 GITHUB_REPO = "maziggy/bambuddy"
+BUILD_COMMIT = os.environ.get("BAMBUDDY_BUILD_COMMIT", "")
+BUILD_TAG = os.environ.get("BAMBUDDY_BUILD_TAG", "")
+BUILD_IMAGE_TAG = os.environ.get("BAMBUDDY_IMAGE_TAG", "")
 BUG_REPORT_RELAY_URL = os.environ.get("BUG_REPORT_RELAY_URL", "https://bambuddy.cool/api/bug-report")
 
 # App directory - where the application is installed (for static files)
