@@ -13,6 +13,8 @@ interface EmbeddedCameraViewerProps {
   printerId: number;
   printerName: string;
   viewerIndex?: number;  // Used to offset multiple viewers
+  docked?: boolean;
+  cardSize?: number;
   onClose: () => void;
 }
 
@@ -36,7 +38,17 @@ const DEFAULT_STATE: CameraState = {
   height: 300,
 };
 
-export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, onClose }: EmbeddedCameraViewerProps) {
+function getDockedHeightClass(cardSize: number): string {
+  switch (cardSize) {
+    case 1: return 'h-[clamp(160px,20vw,240px)]';
+    case 3: return 'h-[clamp(320px,34vw,500px)]';
+    case 4: return 'h-[clamp(420px,42vw,680px)]';
+    case 2:
+    default: return 'h-[clamp(240px,28vw,390px)]';
+  }
+}
+
+export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, docked = false, cardSize = 2, onClose }: EmbeddedCameraViewerProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -467,6 +479,7 @@ export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, 
 
   // Drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (docked) return;
     if ((e.target as HTMLElement).closest('.no-drag')) return;
     setIsDragging(true);
     setDragOffset({
@@ -476,6 +489,7 @@ export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, 
   };
 
   const handleDragTouchStart = (e: React.TouchEvent) => {
+    if (docked) return;
     if ((e.target as HTMLElement).closest('.no-drag')) return;
     const touch = e.touches[0];
     setIsDragging(true);
@@ -487,11 +501,13 @@ export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, 
 
   // Resize handlers
   const handleResizeMouseDown = (e: React.MouseEvent) => {
+    if (docked) return;
     e.stopPropagation();
     setIsResizing(true);
   };
 
   const handleResizeTouchStart = (e: React.TouchEvent) => {
+    if (docked) return;
     e.stopPropagation();
     setIsResizing(true);
   };
@@ -556,12 +572,19 @@ export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, 
   }, [isDragging, isResizing, dragOffset]);
 
   const streamUrl = withStreamToken(`/api/v1/printers/${printerId}/camera/stream?fps=15&t=${imageKey}`);
+  const dockedHeightClass = isMinimized ? 'h-10' : getDockedHeightClass(cardSize);
 
   return (
     <div
       ref={containerRef}
-      className={`${isFullscreen ? 'fixed inset-0 z-[100]' : 'fixed z-40 rounded-lg shadow-2xl border border-bambu-dark-tertiary'} bg-bambu-dark-secondary overflow-hidden`}
-      style={isFullscreen ? undefined : {
+      className={`${
+        isFullscreen
+          ? 'fixed inset-0 z-[100]'
+          : docked
+            ? `relative w-full ${dockedHeightClass} rounded-lg shadow-2xl border border-bambu-dark-tertiary`
+            : 'fixed z-40 rounded-lg shadow-2xl border border-bambu-dark-tertiary'
+      } bg-bambu-dark-secondary overflow-hidden`}
+      style={isFullscreen || docked ? undefined : {
         left: state.x,
         top: state.y,
         width: isMinimized ? 200 : state.width,
@@ -571,7 +594,7 @@ export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, 
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-2 bg-bambu-dark border-b border-bambu-dark-tertiary cursor-grab active:cursor-grabbing"
+        className={`flex items-center justify-between px-3 py-2 bg-bambu-dark border-b border-bambu-dark-tertiary ${docked ? '' : 'cursor-grab active:cursor-grabbing'}`}
         onMouseDown={handleMouseDown}
         onTouchStart={handleDragTouchStart}
       >
@@ -744,7 +767,7 @@ export function EmbeddedCameraViewer({ printerId, printerName, viewerIndex = 0, 
           </div>
 
           {/* Resize handle - hide in fullscreen */}
-          {!isFullscreen && (
+          {!isFullscreen && !docked && (
             <div
               className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize no-drag hover:bg-white/10 rounded-tl transition-colors"
               onMouseDown={handleResizeMouseDown}

@@ -1746,6 +1746,8 @@ function PrinterCard({
   timeFormat = 'system',
   cameraViewMode = 'window',
   onOpenEmbeddedCamera,
+  isEmbeddedCameraOpen = false,
+  onCloseEmbeddedCamera,
   checkPrinterFirmware = true,
   dryingPresets = DRYING_PRESETS,
   requirePlateClear = false,
@@ -1784,6 +1786,8 @@ function PrinterCard({
   timeFormat?: 'system' | '12h' | '24h';
   cameraViewMode?: 'window' | 'embedded';
   onOpenEmbeddedCamera?: (printerId: number, printerName: string) => void;
+  isEmbeddedCameraOpen?: boolean;
+  onCloseEmbeddedCamera?: (printerId: number) => void;
   checkPrinterFirmware?: boolean;
   dryingPresets?: Record<string, { n3f: number; n3s: number; n3f_hours: number; n3s_hours: number }>;
   requirePlateClear?: boolean;
@@ -5588,13 +5592,17 @@ function PrinterCard({
             <div className="flex items-center justify-between gap-2">
               {printerActionsMenu}
               <div className="flex items-center justify-end gap-2 flex-wrap">
-                {/* Camera Button */}
+              {/* Camera Button */}
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
                     if (cameraViewMode === 'embedded' && onOpenEmbeddedCamera) {
-                      onOpenEmbeddedCamera(printer.id, printer.name);
+                      if (isEmbeddedCameraOpen && onCloseEmbeddedCamera) {
+                        onCloseEmbeddedCamera(printer.id);
+                      } else {
+                        onOpenEmbeddedCamera(printer.id, printer.name);
+                      }
                     } else {
                       // Use saved window state or defaults
                       const saved = localStorage.getItem('cameraWindowState');
@@ -5612,7 +5620,11 @@ function PrinterCard({
                     }
                   }}
                   disabled={!status?.connected || !hasPermission('camera:view')}
-                  title={!hasPermission('camera:view') ? t('printers.permission.noCamera') : (cameraViewMode === 'embedded' ? t('printers.openCameraOverlay') : t('printers.openCameraWindow'))}
+                  title={!hasPermission('camera:view')
+                    ? t('printers.permission.noCamera')
+                    : cameraViewMode === 'embedded'
+                      ? (isEmbeddedCameraOpen ? t('common.close') : t('printers.openCameraOverlay'))
+                      : t('printers.openCameraWindow')}
                   className={footerIconButtonClass}
                 >
                   <Video className="w-4 h-4" />
@@ -5648,6 +5660,18 @@ function PrinterCard({
               </div>
             </div>
         </div>
+          </div>
+        )}
+
+        {cameraViewMode === 'embedded' && isEmbeddedCameraOpen && (
+          <div className="mt-4">
+            <EmbeddedCameraViewer
+              printerId={printer.id}
+              printerName={printer.name}
+              docked
+              cardSize={cardSize}
+              onClose={() => onCloseEmbeddedCamera?.(printer.id)}
+            />
           </div>
         )}
       </CardContent>
@@ -8515,6 +8539,18 @@ export function PrintersPage() {
     </>
   );
 
+  const openEmbeddedCamera = (printerId: number, printerName: string) => {
+    setEmbeddedCameraPrinters(prev => new Map(prev).set(printerId, { id: printerId, name: printerName }));
+  };
+
+  const closeEmbeddedCamera = (printerId: number) => {
+    setEmbeddedCameraPrinters(prev => {
+      const next = new Map(prev);
+      next.delete(printerId);
+      return next;
+    });
+  };
+
   return (
     <div className="p-4 md:p-8">
       <div className="space-y-3 mb-6">
@@ -8720,7 +8756,9 @@ export function PrintersPage() {
                       onUnassignSpoolmanSpool={(id) => unassignSpoolmanMutation.mutate(id)}
                       timeFormat={settings?.time_format || 'system'}
                       cameraViewMode={settings?.camera_view_mode || 'window'}
-                      onOpenEmbeddedCamera={(id, name) => setEmbeddedCameraPrinters(prev => new Map(prev).set(id, { id, name }))}
+                      onOpenEmbeddedCamera={openEmbeddedCamera}
+                      isEmbeddedCameraOpen={embeddedCameraPrinters.has(printer.id)}
+                      onCloseEmbeddedCamera={closeEmbeddedCamera}
                       checkPrinterFirmware={settings?.check_printer_firmware !== false}
                       dryingPresets={effectiveDryingPresets}
                       nozzleTempPresets={effectiveNozzleTempPresets}
@@ -8769,7 +8807,9 @@ export function PrintersPage() {
               } : undefined}
               timeFormat={settings?.time_format || 'system'}
               cameraViewMode={settings?.camera_view_mode || 'window'}
-              onOpenEmbeddedCamera={(id, name) => setEmbeddedCameraPrinters(prev => new Map(prev).set(id, { id, name }))}
+              onOpenEmbeddedCamera={openEmbeddedCamera}
+              isEmbeddedCameraOpen={embeddedCameraPrinters.has(printer.id)}
+              onCloseEmbeddedCamera={closeEmbeddedCamera}
               checkPrinterFirmware={settings?.check_printer_firmware !== false}
               dryingPresets={effectiveDryingPresets}
               nozzleTempPresets={effectiveNozzleTempPresets}
@@ -8853,20 +8893,6 @@ export function PrintersPage() {
         />
       )}
 
-      {/* Embedded Camera Viewers - multiple viewers can be open simultaneously */}
-      {Array.from(embeddedCameraPrinters.values()).map((camera, index) => (
-        <EmbeddedCameraViewer
-          key={camera.id}
-          printerId={camera.id}
-          printerName={camera.name}
-          viewerIndex={index}
-          onClose={() => setEmbeddedCameraPrinters(prev => {
-            const next = new Map(prev);
-            next.delete(camera.id);
-            return next;
-          })}
-        />
-      ))}
     </div>
   );
 }

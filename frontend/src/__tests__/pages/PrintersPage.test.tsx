@@ -133,6 +133,34 @@ describe('PrintersPage', () => {
       });
     });
 
+    it('applies printer card size to embedded cameras inside printer cards', async () => {
+      server.use(
+        http.get('/api/v1/settings/ui-preferences', () => {
+          return HttpResponse.json({
+            ams_humidity_good: 40,
+            ams_humidity_fair: 60,
+            ams_temp_good: 30,
+            ams_temp_fair: 35,
+            require_plate_clear: true,
+            camera_view_mode: 'embedded',
+          });
+        })
+      );
+
+      render(<PrintersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('X1 Carbon')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'L' }));
+      fireEvent.click(screen.getAllByTitle('Open camera overlay')[0]);
+
+      const cameraStream = await screen.findByAltText('Camera stream');
+      const cameraRoot = cameraStream.parentElement?.parentElement;
+      expect(cameraRoot).toHaveClass('h-[clamp(320px,34vw,500px)]');
+    });
+
     it('shows printer models', async () => {
       render(<PrintersPage />);
 
