@@ -5586,8 +5586,9 @@ function PrinterCard({
           </div>
         )}
 
-        {/* Connection Info & Actions */}
-        <div className="pt-4">
+        <div className="mt-auto">
+          {/* Connection Info & Actions */}
+          <div className="pt-4">
             <div className="mb-3 h-[2px] bg-bambu-dark-tertiary" />
             <div className="flex items-center justify-between gap-2">
               {printerActionsMenu}
@@ -5659,21 +5660,20 @@ function PrinterCard({
                 )}
               </div>
             </div>
-        </div>
           </div>
-        )}
 
-        {cameraViewMode === 'embedded' && isEmbeddedCameraOpen && (
-          <div className="mt-4">
-            <EmbeddedCameraViewer
-              printerId={printer.id}
-              printerName={printer.name}
-              docked
-              cardSize={cardSize}
-              onClose={() => onCloseEmbeddedCamera?.(printer.id)}
-            />
-          </div>
-        )}
+          {cameraViewMode === 'embedded' && isEmbeddedCameraOpen && (
+            <div className="mt-4">
+              <EmbeddedCameraViewer
+                printerId={printer.id}
+                printerName={printer.name}
+                docked
+                cardSize={cardSize}
+                onClose={() => onCloseEmbeddedCamera?.(printer.id)}
+              />
+            </div>
+          )}
+        </div>
       </CardContent>
 
       {/* File Manager Modal */}
