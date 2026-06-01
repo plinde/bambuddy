@@ -138,6 +138,28 @@ function formatKValue(k: number | null | undefined): string {
   return value.toFixed(3);
 }
 
+type PrinterCardSection = 'controls' | 'filaments';
+
+function getPrinterCardSectionStorageKey(printerId: number, section: PrinterCardSection): string {
+  return `bambuddy.printerCardSection.${printerId}.${section}.open`;
+}
+
+function getStoredPrinterCardSectionOpen(printerId: number, section: PrinterCardSection): boolean {
+  try {
+    return localStorage.getItem(getPrinterCardSectionStorageKey(printerId, section)) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function storePrinterCardSectionOpen(printerId: number, section: PrinterCardSection, isOpen: boolean) {
+  try {
+    localStorage.setItem(getPrinterCardSectionStorageKey(printerId, section), String(isOpen));
+  } catch {
+    // Storage may be unavailable in private contexts; the in-memory state still works.
+  }
+}
+
 // Nozzle side indicators (Bambu Lab style - square badge with L/R)
 function NozzleBadge({ side }: { side: 'L' | 'R' }) {
   const { mode } = useTheme();
@@ -1879,6 +1901,12 @@ function PrinterCard({
     savedPresetId?: string;
   } | null>(null);
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
+  const [controlsSectionOpen, setControlsSectionOpen] = useState(() =>
+    getStoredPrinterCardSectionOpen(printer.id, 'controls')
+  );
+  const [filamentsSectionOpen, setFilamentsSectionOpen] = useState(() =>
+    getStoredPrinterCardSectionOpen(printer.id, 'filaments')
+  );
   const [plateCheckResult, setPlateCheckResult] = useState<{
     is_empty: boolean;
     confidence: number;
@@ -1896,6 +1924,31 @@ function PrinterCard({
   const [editingRoi, setEditingRoi] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [isSavingRoi, setIsSavingRoi] = useState(false);
   const [plateCheckLightWasOff, setPlateCheckLightWasOff] = useState(false);
+
+  useEffect(() => {
+    setControlsSectionOpen(getStoredPrinterCardSectionOpen(printer.id, 'controls'));
+    setFilamentsSectionOpen(getStoredPrinterCardSectionOpen(printer.id, 'filaments'));
+  }, [printer.id]);
+
+  const handleControlsSectionToggle = useCallback((open: boolean) => {
+    setControlsSectionOpen(open);
+    storePrinterCardSectionOpen(printer.id, 'controls', open);
+  }, [printer.id]);
+
+  const handleFilamentsSectionToggle = useCallback((open: boolean) => {
+    setFilamentsSectionOpen(open);
+    storePrinterCardSectionOpen(printer.id, 'filaments', open);
+  }, [printer.id]);
+
+  const renderCardSectionSummary = (label: string, extra?: React.ReactNode) => (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] uppercase tracking-wider text-bambu-gray font-medium">
+        {label}
+      </span>
+      {extra}
+      <div className="flex-1 h-px bg-bambu-dark-tertiary/30" />
+    </div>
+  );
 
   const { data: status } = useQuery({
     queryKey: ['printerStatus', printer.id],
@@ -4024,15 +4077,13 @@ function PrinterCard({
               const printControlClass = 'flex h-8 w-20 items-center justify-center gap-1 px-2 rounded-lg text-xs font-medium transition-colors';
 
               return (
-                <div className="mt-3">
-                  {/* Section Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] uppercase tracking-wider text-bambu-gray font-medium">
-                      {t('printers.controls')}
-                    </span>
-                    <div className="flex-1 h-[2px] bg-bambu-dark-tertiary" />
-                  </div>
-
+                <Collapsible
+                  className="mt-3"
+                  summaryClassName="py-0"
+                  open={controlsSectionOpen}
+                  onToggle={handleControlsSectionToggle}
+                  summary={renderCardSectionSummary(t('printers.controls'))}
+                >
                   <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-2">
                     {/* Left: Secondary controls */}
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -4399,7 +4450,7 @@ function PrinterCard({
                       })()}
                     </div>
                   </div>
-                </div>
+                </Collapsible>
               );
             })()}
 
@@ -4430,19 +4481,19 @@ function PrinterCard({
               };
 
               return (
-                <div className="mt-3">
-                  {/* Section Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] uppercase tracking-wider text-bambu-gray font-medium">
-                      {t('printers.filaments')}
-                    </span>
+                <Collapsible
+                  className="mt-3"
+                  summaryClassName="py-0"
+                  open={filamentsSectionOpen}
+                  onToggle={handleFilamentsSectionToggle}
+                  summary={renderCardSectionSummary(
+                    t('printers.filaments'),
                     <AmsBackupBadge
                       state={status.ams_filament_backup}
                       onClick={() => setAmsBackupModalOpen(true)}
                     />
-                    <div className="flex-1 h-[2px] bg-bambu-dark-tertiary" />
-                  </div>
-
+                  )}
+                >
                   {/* AMS Content */}
                   <div className="flex flex-wrap gap-2">
                     {/* Regular AMS units */}
@@ -5478,7 +5529,7 @@ function PrinterCard({
                         </div>
                       )}
                   </div>
-                </div>
+                </Collapsible>
               );
             })()}
           </>

@@ -2,7 +2,7 @@
  * Tests for the PrintersPage component.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../utils';
@@ -70,9 +70,29 @@ const selectToolbarDropdownOption = async (triggerName: RegExp, optionName: RegE
   await user.click(await screen.findByRole('button', { name: optionName }));
 };
 
+const clearPrinterCardSectionStorage = () => {
+  for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('bambuddy.printerCardSection.')) {
+      localStorage.removeItem(key);
+    }
+  }
+};
+
+const expectSectionCollapseStored = (section: 'controls' | 'filaments') => {
+  expect(vi.mocked(localStorage.setItem)).toHaveBeenCalledWith(
+    expect.stringMatching(new RegExp(`^bambuddy\\.printerCardSection\\.\\d+\\.${section}\\.open$`)),
+    'false'
+  );
+};
+
 describe('PrintersPage', () => {
   beforeEach(() => {
+    vi.mocked(localStorage.getItem).mockReset();
+    vi.mocked(localStorage.setItem).mockClear();
+    vi.mocked(localStorage.removeItem).mockClear();
     localStorage.removeItem('printerCardSize');
+    clearPrinterCardSectionStorage();
 
     server.use(
       http.get('/api/v1/printers/', () => {
@@ -159,6 +179,76 @@ describe('PrintersPage', () => {
       const cameraStream = await screen.findByAltText('Camera stream');
       const cameraRoot = cameraStream.parentElement?.parentElement;
       expect(cameraRoot).toHaveClass('h-[clamp(320px,34vw,500px)]');
+    });
+
+    it('persists collapsed printer controls per card', async () => {
+      render(<PrintersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('X1 Carbon')).toBeInTheDocument();
+      });
+
+      const controlsToggles = await screen.findAllByRole('button', { name: /Controls/i });
+      await waitFor(() => {
+        expect(screen.getAllByText('Stop')).toHaveLength(2);
+      });
+
+      fireEvent.click(controlsToggles[0]);
+
+      expectSectionCollapseStored('controls');
+      await waitFor(() => {
+        expect(screen.getAllByText('Stop')).toHaveLength(1);
+      });
+    });
+
+    it('respects stored collapsed controls state on first render', async () => {
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) => (
+        key === 'bambuddy.printerCardSection.1.controls.open' ? 'false' : null
+      ));
+
+      render(<PrintersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('X1 Carbon')).toBeInTheDocument();
+      });
+
+      await screen.findAllByRole('button', { name: /Controls/i });
+      await waitFor(() => {
+        expect(screen.getAllByText('Stop')).toHaveLength(1);
+      });
+    });
+
+    it('persists collapsed printer filaments per card', async () => {
+      server.use(
+        http.get('/api/v1/printers/:id/status', () => {
+          return HttpResponse.json({
+            ...mockPrinterStatus,
+            ams: [{
+              id: 0,
+              tray: [
+                { id: 0, tray_type: 'PLA', tray_color: 'FF0000FF', remain: 80, state: 11 },
+                { id: 1, tray_type: '', state: 9 },
+                { id: 2, tray_type: '', state: 9 },
+                { id: 3, tray_type: '', state: 9 },
+              ],
+            }],
+          });
+        })
+      );
+
+      render(<PrintersPage />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText('AMS-A')).toHaveLength(2);
+      });
+
+      const filamentsToggles = screen.getAllByRole('button', { name: /Filaments/i });
+      fireEvent.click(filamentsToggles[0]);
+
+      expectSectionCollapseStored('filaments');
+      await waitFor(() => {
+        expect(screen.getAllByText('AMS-A')).toHaveLength(1);
+      });
     });
 
     it('shows printer models', async () => {
@@ -980,6 +1070,8 @@ describe('PrintersPage', () => {
 
   describe('search and filter', () => {
     beforeEach(() => {
+      clearPrinterCardSectionStorage();
+
       server.use(
         http.get('/api/v1/printers/', () => HttpResponse.json(mockPrinters)),
         http.get('/api/v1/printers/:id/status', () => HttpResponse.json(mockPrinterStatus)),
@@ -1242,6 +1334,7 @@ describe('PrintersPage Phase 13 — EmptySlotHoverCard onAssignSpool wiring', ()
   beforeEach(() => {
     phase13EmptySlotProps.length = 0;
     localStorage.removeItem('printerCardSize');
+    clearPrinterCardSectionStorage();
 
     server.use(
       http.get('/api/v1/printers/', () => HttpResponse.json(mockPrinters)),
@@ -1353,6 +1446,7 @@ describe('PrintersPage Phase 14 — Local-Branch BL-detection symmetry', () => {
   beforeEach(() => {
     phase14HoverCardProps.length = 0;
     localStorage.removeItem('printerCardSize');
+    clearPrinterCardSectionStorage();
 
     server.use(
       http.get('/api/v1/printers/', () => HttpResponse.json(mockPrinters)),
