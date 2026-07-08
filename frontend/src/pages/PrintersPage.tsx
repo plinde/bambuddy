@@ -5637,7 +5637,6 @@ function PrinterCard({
           </div>
         )}
 
-        <div className="mt-auto">
           {/* Connection Info & Actions */}
           <div className="pt-4">
             <div className="mb-3 h-[2px] bg-bambu-dark-tertiary" />
@@ -5725,6 +5724,7 @@ function PrinterCard({
             </div>
           )}
         </div>
+        )}
       </CardContent>
 
       {/* File Manager Modal */}
